@@ -49,6 +49,21 @@ class Auth extends CI_Controller {
 			json_output($respStatus,$resp); 
 		}
 	}
+	public function verify()
+	{	
+		$method = $_SERVER['REQUEST_METHOD'];
+		if($method != 'POST'){
+			json_output(400,array('status' => 400,'message' => 'Bad request.'));
+		} else {
+			$params = json_decode(file_get_contents('php://input'), TRUE);
+				if ($params['contact'] == "") {
+						$resp = array('status' => 400,'message' =>  'contact is required');
+					} else {
+		        		$resp = $this->MyModel->verify($params);
+					}
+			json_output($resp['status'],$resp); 
+		}
+	}
 	public function logout()
 	{	
 		$method = $_SERVER['REQUEST_METHOD'];

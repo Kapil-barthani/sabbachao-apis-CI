@@ -74,6 +74,15 @@ class MyModel extends CI_Model {
                     return array('status' => 201,'message' => 'SignUp Successfully','data'=>$data);
             } 
     }
+    public function verify($data)
+    {
+        $c = $this->db->select('contact')->from('users')->where('contact',$data['contact'])->get()->row();
+        if($c && $c->contact==$data['contact']){
+            return array('status' => 401,'message' => 'contact already exists');
+        }else{
+            return array('status' => 201,'message' => "contact does't exists");
+        } 
+    }
     public function logout()
     {
         $users_id  = $this->input->get_request_header('User-ID', TRUE);
