@@ -16,17 +16,30 @@ class MyModel extends CI_Model {
         }
     }
 
-    public function login($username,$password)
+    public function login($contact,$password, $bypass=false)
     {
-        $q  = $this->db->select('password,id')->from('users')->where('username',$username)->get()->row();
+        $q  = $this->db->select('password,id,contact')->from('users')->where('contact',$contact)->get()->row();
         if($q == ""){
-            return array('status' => 204,'message' => 'Username not found.');
+            return array('status' => 400,'message' => 'Invalid contact or Password.');
         } else {
             $hashed_password = $q->password;
+            $d_contact = $q->contact;
+            //$encrypt_password = $this->encrypt->encode($password);
             $id              = $q->id;
-            if (hash_equals($hashed_password, crypt($password, $hashed_password))) {
+            if ($bypass || ($hashed_password ==$password && $d_contact == $contact)) {
                $last_login = date('Y-m-d H:i:s');
-               $token = crypt(substr( md5(rand()), 0, 7));
+                    $randomIdLength=60;
+                    $token = '';
+                    do {
+                        $bytes = random_bytes($randomIdLength);
+                        $token .= str_replace(
+                            ['.','/','='], 
+                            '',
+                            base64_encode($bytes)
+                        );
+                    } while (strlen($token) < $randomIdLength);
+                    //return $token;
+               //$token = crypt(substr( md5(rand()), 0, 7));
                $expired_at = date("Y-m-d H:i:s", strtotime('+12 hours'));
                $this->db->trans_start();
                $this->db->where('id',$id)->update('users',array('last_login' => $last_login));
@@ -36,14 +49,40 @@ class MyModel extends CI_Model {
                   return array('status' => 500,'message' => 'Internal server error.');
                } else {
                   $this->db->trans_commit();
-                  return array('status' => 200,'message' => 'Successfully login.','id' => $id, 'token' => $token);
+                  $data = $this->db->select('id,username,email,contact,dob,gender')->from('users')->where('id',$id)->order_by('id','desc')->get()->result();
+                  if($bypass==true){
+                      $msg= "SignUp Successfully";
+                  }else{
+                      $msg= "Login Successfully";
+                  }
+                  return array('status' => 200,'message' =>$msg ,'data' => $data, 'token' => stripslashes($token));
                }
             } else {
-               return array('status' => 204,'message' => 'Wrong password.');
+               return array('status' => 400,'message' => 'Invalid contact or Password.');
             }
         }
     }
-
+    public function signup($data)
+    {       //$data['password'] = $this->encrypt->encode($data['password']);
+            $c = $this->db->select('contact')->from('users')->where('contact',$data['contact'])->get()->row();
+            if($c && $c->contact==$data['contact']){
+                return array('status' => 401,'message' => 'Contact already exists');
+            }else{
+                    $this->db->insert('users',$data);
+                    $insert_id = $this->db->insert_id();
+                    $data = $this->db->select('id,username,email,contact,dob,gender')->from('users')->where('id',$insert_id)->order_by('id','desc')->get()->result();
+                    return array('status' => 201,'message' => 'SignUp Successfully','data'=>$data);
+            } 
+    }
+    public function verify($data)
+    {
+        $c = $this->db->select('contact')->from('users')->where('contact',$data['contact'])->get()->row();
+        if($c && $c->contact==$data['contact']){
+            return array('status' => 401,'message' => 'contact already exists');
+        }else{
+            return array('status' => 201,'message' => "contact does't exists");
+        } 
+    }
     public function logout()
     {
         $users_id  = $this->input->get_request_header('User-ID', TRUE);
@@ -54,6 +93,7 @@ class MyModel extends CI_Model {
 
     public function auth()
     {
+        
         $users_id  = $this->input->get_request_header('User-ID', TRUE);
         $token     = $this->input->get_request_header('Authorization', TRUE);
         $q  = $this->db->select('expired_at')->from('users_authentication')->where('users_id',$users_id)->where('token',$token)->get()->row();
@@ -80,13 +120,7 @@ class MyModel extends CI_Model {
     {
         return $this->db->select('id,title,author')->from('books')->where('id',$id)->order_by('id','desc')->get()->row();
     }
-
-    public function book_create_data($data)
-    {
-        $this->db->insert('books',$data);
-        return array('status' => 201,'message' => 'Data has been created.');
-    }
-
+    
     public function book_update_data($id,$data)
     {
         $this->db->where('id',$id)->update('books',$data);
