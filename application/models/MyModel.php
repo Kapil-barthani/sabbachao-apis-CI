@@ -18,15 +18,12 @@ class MyModel extends CI_Model {
 
     public function login($contact,$password, $bypass=false)
     {
-        $q  = $this->db->select('password,id,contact')->from('users')->where('contact',$contact)->get()->row();
+        $q  = $this->db->select('password,id,contact,password_token')->from('users')->where('contact',$contact)->get()->row();
         if($q == ""){
             return array('status' => 400,'message' => 'Invalid contact or Password.');
         } else {
-            $hashed_password = $q->password;
-            $d_contact = $q->contact;
-            //$encrypt_password = $this->encrypt->encode($password);
             $id              = $q->id;
-            if ($bypass || ($hashed_password ==$password && $d_contact == $contact)) {
+            if ($bypass || ($q->password == crypt($password,$q->password_token) && $q->contact == $contact)) {
                $last_login = date('Y-m-d H:i:s');
                     $randomIdLength=60;
                     $token = '';
@@ -63,7 +60,7 @@ class MyModel extends CI_Model {
         }
     }
     public function signup($data)
-    {       //$data['password'] = $this->encrypt->encode($data['password']);
+    { 
             $c = $this->db->select('contact')->from('users')->where('contact',$data['contact'])->get()->row();
             if($c && $c->contact==$data['contact']){
                 return array('status' => 401,'message' => 'Contact already exists');
@@ -79,6 +76,20 @@ class MyModel extends CI_Model {
         $c = $this->db->select('contact')->from('users')->where('contact',$data['contact'])->get()->row();
         if($c && $c->contact==$data['contact']){
             return array('status' => 401,'message' => 'contact already exists');
+        }else{
+            return array('status' => 201,'message' => "contact does't exists");
+        } 
+    }
+	public function forgotpassword($data)
+    {
+        $c = $this->db->select('contact,id')->from('users')->where('contact',$data['contact'])->get()->row();
+        if($c && $c->contact==$data['contact']){
+			$r = $this->db->where('id',$c->id)->update('users',['password'=>$data['password'],'password_token'=>$data['password_token']]);
+			if($r){
+				return array('status' => 200,'message' => 'Password has been updated.');
+			}else{
+				return array('status' => 200,'message' => 'Password not updated.');
+			}
         }else{
             return array('status' => 201,'message' => "contact does't exists");
         } 
