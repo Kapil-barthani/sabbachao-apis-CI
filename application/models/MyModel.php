@@ -16,6 +16,22 @@ class MyModel extends CI_Model {
         }
     }
 
+
+    public function verify_token($params){
+        
+        $token   = '';
+        $token   = $this->input->get_request_header('token', TRUE);
+        !$token  && $token  = $this->input->get('token', TRUE);
+        !$token  && $token  = $this->input->post('token', TRUE);
+        if($token){
+            $q  = $this->db->select('*')->from('users_authentication')->where('token',$token)->where('status',1)->get()->row();
+            if($q){
+                return $q->users_id;
+            }
+        } 
+        json_output(401,array('status' => 401,'message' => 'Unauthorized.'));
+        return false;
+    }
     public function login($contact,$password, $bypass=false)
     {
         $q  = $this->db->select('password,id,contact,password_token')->from('users')->where('contact',$contact)->get()->row();
@@ -40,6 +56,7 @@ class MyModel extends CI_Model {
                $expired_at = date("Y-m-d H:i:s", strtotime('+12 hours'));
                $this->db->trans_start();
                $this->db->where('id',$id)->update('users',array('last_login' => $last_login));
+               $this->db->where('users_id',$id)->update('users_authentication',array('status' => 0));
                $this->db->insert('users_authentication',array('users_id' => $id,'token' => $token,'expired_at' => $expired_at));
                if ($this->db->trans_status() === FALSE){
                   $this->db->trans_rollback();
@@ -93,6 +110,56 @@ class MyModel extends CI_Model {
         }else{
             return array('status' => 201,'message' => "contact does't exists");
         } 
+    }
+    public function changepassword($data)
+    {
+        $user = $this->db->select('*')->from('users')->where('id',$data['user_id'])->get()->row();
+        if($user && ($user->password == crypt($data['old_password'],$user->password_token))){
+			$randomIdLength=10;
+            $token = '';
+            do {
+                $bytes = random_bytes($randomIdLength);
+                $token .= str_replace(
+                    ['.','/','='], 
+                    '',
+                    base64_encode($bytes)
+                );
+            } while (strlen($token) < $randomIdLength);
+            $data['password_token'] = $token;
+            $data['password'] = crypt($data['new_password'],$token);
+            $this->db->set(['password'=>$data['password'],'password_token'=>$data['password_token']]);
+            $this->db->where('id',$data['user_id']);
+            $result = $this->db->update('users'); 
+            if($result){
+                return array('status' => 200,'message' => "Password has been updated");
+            }else{
+                return array('status' => 400,'message' => "Password not Updated");
+            }
+        }else{
+            return array('status' => 400,'message' => "Invalid old password");
+        } 
+    }
+    public function updateUser($data)
+    {   
+        $validKeys = ['username','gender','email','dob','user_id'];
+        if (count($data)==1) { return array('status' => 400,'message' => "Data required"); } 
+        foreach($data as $column=>$value){
+            if (!in_array($column, $validKeys)) {
+                return array('status' => 400,'message' => "Invalid attribute '$column'");
+            } else if(trim($value) === '') {
+                return array('status' => 400,'message' => "$column can not be empty");
+            }
+        }
+        $user_id = $data['user_id'];
+        unset($data['user_id']);
+        $this->db->set($data);
+        $this->db->where('id', $user_id);
+        $result = $this->db->update('users'); 
+        if($result){
+            return array('status' => 200,'message' => "Data has been updated");
+        }else{
+            return array('status' => 400,'message' => "Data not Updated");
+        }
     }
     public function logout()
     {

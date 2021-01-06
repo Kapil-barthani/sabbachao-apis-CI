@@ -122,6 +122,49 @@ class Auth extends CI_Controller {
 				}
 		}
 	}
+	public function update()
+	{	
+		$method = $_SERVER['REQUEST_METHOD'];
+		if($method != 'POST'){
+			json_output(400,array('status' => 400,'message' => 'Bad request.'));
+		} else {
+			$action  = $this->input->get('action', TRUE);
+			$params = json_decode(file_get_contents('php://input'), TRUE);
+			if($action && $action=='data'){
+				$params['user_id'] = $this->MyModel->verify_token($params);
+				if (!$params['user_id']) {
+					return;
+				}
+				//json_output(400,array('status' => 400,'message' => 'Bad request.'.$params['user_id']));
+				$response = $this->MyModel->updateUser($params);
+				json_output($response['status'],$response);
+			}elseif($action && $action=='changepassword'){
+				$params['user_id'] = $this->MyModel->verify_token($params);
+				if (!$params['user_id']) {
+					return;
+				}
+				$params['new_password']= empty($params['new_password'])?'':$params['new_password'];
+				$params['confirm_password']= empty($params['confirm_password'])?'':$params['confirm_password'];
+				if(empty($params['new_password']) || empty($params['confirm_password'])){
+					return json_output(400,array('status' => 400,'message' => "Provide New Password and Confirm Password"));
+				}
+				if($params['new_password'] != $params['confirm_password']){
+					return json_output(400,array('status' => 400,'message' => "Confirm Password not Matched"));
+				}
+				$params['old_password']= empty($params['old_password'])?'':$params['old_password'];
+				if(empty($params['old_password'])){
+					return json_output(400,array('status' => 400,'message' => "Provide old password"));
+				}
+				$response = $this->MyModel->changepassword($params);
+				json_output($response['status'],$response);
+			}elseif($action==""){
+				return json_output(400,array('status' => 400,'message' => 'Action is required'));
+			}
+			
+			//$response = $this->MyModel->updateUser($params);
+			//json_output($response['status'],$response);
+		}
+	}
 	public function logout()
 	{	
 		$method = $_SERVER['REQUEST_METHOD'];
