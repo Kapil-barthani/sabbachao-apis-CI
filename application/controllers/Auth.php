@@ -135,7 +135,6 @@ class Auth extends CI_Controller {
 				if (!$params['user_id']) {
 					return;
 				}
-				//json_output(400,array('status' => 400,'message' => 'Bad request.'.$params['user_id']));
 				$response = $this->MyModel->updateUser($params);
 				json_output($response['status'],$response);
 			}elseif($action && $action=='changepassword'){
