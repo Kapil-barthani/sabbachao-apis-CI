@@ -61,6 +61,19 @@ class User extends CI_Controller {
 				$response = $this->UserModel->getCustomerAddresses($params);
 				json_output($response['status'],$response);
 			}
+		}if($action && $action=='update'){
+			if($method != 'PUT'){
+				json_output(400,array('status' => 400,'message' => 'Method for request should be PUT'));
+			} else {
+				$params['user_id'] = $this->MyModel->verify_token($params);
+				if (!$params['user_id']) {
+					return;
+				}
+				$this->load->model('UserModel');
+				//return json_output(400,array('status' => 400,'message' => $params));
+				$response = $this->UserModel->updateCustomerAddressLabel($params);
+				json_output($response['status'],$response);
+			}
 		}elseif($action!="update" && $action!="get"){
 			return json_output(400,array('status' => 400,'message' => 'Invalid action.'));
 		}elseif($action==""){
