@@ -80,5 +80,49 @@ class User extends CI_Controller {
 			return json_output(400,array('status' => 400,'message' => 'Action is required'));
 		}
 	}
+	public function products()
+	{	
+		$method = $_SERVER['REQUEST_METHOD'];
+		$action  = $this->input->get('action', TRUE);
+		$params = json_decode(file_get_contents('php://input'), TRUE);
+		if($action && $action=='get'){
+			if($method != 'GET'){
+				json_output(400,array('status' => 400,'message' => 'Method for request should be GET'));
+			} else {
+				$params['user_id'] = $this->MyModel->verify_token($params);
+				if (!$params['user_id']) {
+					return;
+				}
+				$this->load->model('ProductModel');
+				$response = $this->ProductModel->getAllProducts($params);
+				json_output($response['status'],$response);
+			}
+		}else if($action && $action=='update'){
+			if($method != 'PUT'){
+				json_output(400,array('status' => 400,'message' => 'Method for request should be PUT'));
+			} else {
+				$params['user_id'] = $this->MyModel->verify_token($params);
+				if (!$params['user_id']) {
+					return;
+				}
+				$this->load->model('UserModel');
+				//return json_output(400,array('status' => 400,'message' => $params));
+				$response = $this->UserModel->updateCustomerAddressLabel($params);
+				json_output($response['status'],$response);
+			}
+		}else if($action==""){
+			if($method != 'POST'){
+				json_output(400,array('status' => 400,'message' => 'Method for request should be POST'));
+			} else {
+				$params['user_id'] = $this->MyModel->verify_token($params);
+				if (!$params['user_id']) {
+					return;
+				}
+				$this->load->model('ProductModel');
+				$response = $this->ProductModel->addToCart($params);
+				json_output($response['status'],$response);
+			}
+		}
+	}
 	
 }
