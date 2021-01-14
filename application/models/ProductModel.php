@@ -5,16 +5,46 @@ class ProductModel extends CI_Model {
 
     public function getAllProducts($data)
     { 
-        if(count($data) ==1 && $data['user_id']){
-            $all_products = $this->db->select('*')->from('products')->get()->result_array();
-            if($all_products){
-                return array('status' => 200,'message' => 'Products','Tolat Products'=>count($all_products),'products'=>$all_products);
+        $all_products = $this->db->select('*')->from('products')->get()->result_array();
+        if($all_products){
+            return array('status' => 200,'message' => 'Products','Total Products'=>count($all_products),'products'=>$all_products);
+        }else{
+            return array('status' => 400,'message' => 'something went wrong');
+        }
+    }
+    public function getCart($data)
+    {   if(count($data)==1 && $data['user_id']){
+            $cart_id = $this->db->select('*')->from('carts')->where(['user_id'=>$data['user_id'],'status'=>1])->get()->row();
+            if($cart_id){
+                $cart_items= $this->db->select('*')->from('cart_items')->where(['cart_id'=>$cart_id->cart_id,'user_id'=>$data['user_id'],'status'=>1])->get()->result_array();
+                if($cart_items){
+                    return array('status' => 200,'message' => 'Cart','Total Cart Items : '=>count($cart_items),'cart_data'=>$cart_items);
+                }else{
+                    return array('status' => 400,'message' => 'Cart is Empty');
+                }
             }else{
-                return array('status' => 400,'message' => 'something went wrong');
+                return array('status' => 400,'message' => 'Cart is not Created Still');
             }
         }else{
-            return array('status' => 400,'message' => "Products Not availble");
-        } 
+            return array('status' => 400,'message' => 'something went wrong');
+        }
+    }
+    public function deleteCartItem($data)
+    {   if(count($data)==2 && $data['user_id'] && $data['product_id']){
+            $cart_id = $this->db->select('*')->from('carts')->where(['user_id'=>$data['user_id'],'status'=>1])->get()->row();
+            if($cart_id){
+                $cart_item_deleted = $this->db->where(['cart_id'=>$cart_id->cart_id,'user_id'=>$data['user_id'],'product_id'=>$data['product_id'],'status'=>1])->update('cart_items',['status'=>0]);
+                if($cart_item_deleted){
+                    return array('status' => 200,'message' => 'Cart item is Deleted');
+                }else{
+                    return array('status' => 400,'message' => 'Cart Item is not Deleted');
+                }
+            }else{
+                return array('status' => 400,'message' => 'Cart is not Created Still');
+            }
+        }else{
+            return array('status' => 400,'message' => 'something went wrong');
+        }
     }
     public function addToCart($data)
     {   
@@ -31,7 +61,7 @@ class ProductModel extends CI_Model {
             $cart_id = $this->db->select('*')->from('carts')->where(['user_id'=>$data['user_id'],'status'=>1])->get()->row();
             if($cart_id){
                 $cart_item_result_id = $this->db->select('*')->from('cart_items')->where(['cart_id'=>$cart_id->cart_id,'user_id'=>$data['user_id'],'product_id'=>$data['product_id'],'status'=>1])->get()->row();
-                if($cart_item_result_id->cart_item_id){
+                if($cart_item_result_id){
                     //return array('status' => 200,'message' => $cart_item_result_id->cart_item_id);
                     $cart_item_result = $this->db->where('cart_item_id',$cart_item_result_id->cart_item_id)->update('cart_items',['quantity'=>$data['quantity'],'total_price'=>$data['total_price']]);
                     if($cart_item_result){
@@ -52,7 +82,7 @@ class ProductModel extends CI_Model {
                 $cart_id = $this->db->insert_id();
                 if($cart_result){
                     $cart_item_result_id = $this->db->select('*')->from('cart_items')->where(['cart_id'=>$cart_id,'user_id'=>$data['user_id'],'product_id'=>$data['product_id'],'status'=>1])->get()->row();
-                    if($cart_item_result_id->cart_item_id){
+                    if($cart_item_result_id){
                         $cart_item_result = $this->db->where('cart_item_id',$cart_item_result_id->cart_item_id)->update('cart_items',['quantity'=>$data['quantity'],'total_price'=>$data['total_price']]);
                         if($cart_item_result){
                             return array('status' => 200,'message' => "Item updated successfully");

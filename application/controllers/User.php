@@ -10,10 +10,10 @@ class User extends CI_Controller {
 			json_output(400,array('status' => 400,'message' => 'Method must be GET'));
 		} else {
 			$params = json_decode(file_get_contents('php://input'), TRUE);
-			$params['user_id'] = $this->MyModel->verify_token($params);
-			if (!$params['user_id']) {
-				return;
-			}
+			// $params['user_id'] = $this->MyModel->verify_token($params);
+			// if (!$params['user_id']) {
+			// 	return;
+			// }
 			$this->load->model('UserModel');
 			$response = $this->UserModel->offers();
 			json_output($response['status'],$response);
@@ -83,9 +83,22 @@ class User extends CI_Controller {
 	public function products()
 	{	
 		$method = $_SERVER['REQUEST_METHOD'];
+		//return json_output(400,array('status' => 400,'message' => $method));
 		$action  = $this->input->get('action', TRUE);
 		$params = json_decode(file_get_contents('php://input'), TRUE);
 		if($action && $action=='get'){
+			if($method != 'GET'){
+				json_output(400,array('status' => 400,'message' => 'Method for request should be GET'));
+			} else {
+				// $params['user_id'] = $this->MyModel->verify_token($params);
+				// if (!$params['user_id']) {
+				// 	return;
+				// }
+				$this->load->model('ProductModel');
+				$response = $this->ProductModel->getAllProducts($params);
+				json_output($response['status'],$response);
+			}
+		}else if($action && $action=='getCart'){
 			if($method != 'GET'){
 				json_output(400,array('status' => 400,'message' => 'Method for request should be GET'));
 			} else {
@@ -94,7 +107,7 @@ class User extends CI_Controller {
 					return;
 				}
 				$this->load->model('ProductModel');
-				$response = $this->ProductModel->getAllProducts($params);
+				$response = $this->ProductModel->getCart($params);
 				json_output($response['status'],$response);
 			}
 		}else if($action && $action=='update'){
@@ -108,6 +121,22 @@ class User extends CI_Controller {
 				$this->load->model('UserModel');
 				//return json_output(400,array('status' => 400,'message' => $params));
 				$response = $this->UserModel->updateCustomerAddressLabel($params);
+				json_output($response['status'],$response);
+			}
+		}else if($action && $action=='deleteCartItem'){
+			if($method != "DELETE"){
+				json_output(400,array('status' => 400,'message' => 'Method for request should be DELETE'));
+			} else {
+				$params['user_id'] = $this->MyModel->verify_token($params);
+				if (!$params['user_id']) {
+					return;
+				}
+				$params['product_id']= empty($params['product_id'])?'':$params['product_id'];
+				if(empty($params['product_id'])){
+					return json_output(400,array('status' => 400,'message' => "product_id is required"));
+				}
+				$this->load->model('ProductModel');
+				$response = $this->ProductModel->deleteCartItem($params);
 				json_output($response['status'],$response);
 			}
 		}else if($action==""){
