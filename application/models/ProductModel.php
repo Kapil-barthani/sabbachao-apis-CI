@@ -16,7 +16,12 @@ class ProductModel extends CI_Model {
     {   if(count($data)==1 && $data['user_id']){
             $cart_id = $this->db->select('*')->from('carts')->where(['user_id'=>$data['user_id'],'status'=>1])->get()->row();
             if($cart_id){
-                $cart_items= $this->db->select('*')->from('cart_items')->where(['cart_id'=>$cart_id->cart_id,'user_id'=>$data['user_id'],'status'=>1])->get()->result_array();
+                $this->db->select('*');
+                $this->db->from('products');
+                $this->db->join('cart_items', 'products.product_id = cart_items.product_id');
+                $this->db->where(['cart_items.cart_id'=>$cart_id->cart_id,'cart_items.user_id'=>$data['user_id'],'cart_items.status'=>1]);
+                $cart_items = $this->db->get()->result_array();
+                //$cart_items= $this->db->select('*')->from('cart_items')->where(['cart_id'=>$cart_id->cart_id,'user_id'=>$data['user_id'],'status'=>1])->get()->result_array();
                 if($cart_items){
                     return array('status' => 200,'message' => 'Cart','Total Cart Items : '=>count($cart_items),'cart_data'=>$cart_items);
                 }else{
