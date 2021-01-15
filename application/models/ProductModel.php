@@ -2,7 +2,15 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 class ProductModel extends CI_Model {
-
+    public function getSliderImages()
+    { 
+        $getSliderImages = $this->db->select('*')->from('slider_images')->get()->result_array();
+        if($getSliderImages){
+            return array('status' => 200,'message' => 'Advertisement Slider Images','Total Slider Images'=>count($getSliderImages),'sliderImages'=>$getSliderImages);
+        }else{
+            return array('status' => 400,'message' => 'something went wrong');
+        }
+    }
     public function getAllProducts($data)
     { 
         $all_products = $this->db->select('*')->from('products')->get()->result_array();

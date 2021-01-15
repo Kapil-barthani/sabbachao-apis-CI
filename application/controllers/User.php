@@ -2,7 +2,18 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 class User extends CI_Controller {
-	
+	public function getSliderImages()
+	{	
+		$method = $_SERVER['REQUEST_METHOD'];
+		if($method != 'GET'){
+			json_output(400,array('status' => 400,'message' => 'Method must be GET'));
+		} else {
+			$params = json_decode(file_get_contents('php://input'), TRUE);
+			$this->load->model('ProductModel');
+			$response = $this->ProductModel->getSliderImages();
+			json_output($response['status'],$response);
+		}
+	}
 	public function offers()
 	{	
 		$method = $_SERVER['REQUEST_METHOD'];
