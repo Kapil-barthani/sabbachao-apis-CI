@@ -37,8 +37,8 @@ class User extends CI_Controller {
 		if($method != 'POST'){
 			json_output(400,array('status' => 400,'message' => 'Bad request.'));
 		}else {
-			$params['user_id'] = $this->MyModel->verify_token($params);
-			if (!$params['user_id']) {
+			$params['customer_id'] = $this->MyModel->verify_token($params);
+			if (!$params['customer_id']) {
 				return;
 			}
 			$params['full_name']= empty($params['full_name'])?'':$params['full_name'];
@@ -76,8 +76,8 @@ class User extends CI_Controller {
 			if($method != 'PUT'){
 				json_output(400,array('status' => 400,'message' => 'Method for request should be PUT'));
 			} else {
-				$params['user_id'] = $this->MyModel->verify_token($params);
-				if (!$params['user_id']) {
+				$params['customer_id'] = $this->MyModel->verify_token($params);
+				if (!$params['customer_id']) {
 					return;
 				}
 				$this->load->model('UserModel');

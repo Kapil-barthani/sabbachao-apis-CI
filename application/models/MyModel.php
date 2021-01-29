@@ -24,9 +24,9 @@ class MyModel extends CI_Model {
         !$token  && $token  = $this->input->get('token', TRUE);
         !$token  && $token  = $this->input->post('token', TRUE);
         if($token){
-            $q  = $this->db->select('*')->from('users_authentication')->where('token',$token)->where('status',1)->get()->row();
+            $q = $this->db->select('*')->from('sab_customer_sessions')->where(['session_token'=>$token,'status_type'=>'1'])->get()->result_array();
             if($q){
-                return $q->users_id;
+                return $q[0]['customer_id'];
             }
         } 
         json_output(401,array('status' => 401,'message' => 'Unauthorized.'));
@@ -34,7 +34,7 @@ class MyModel extends CI_Model {
     }
     public function login($contact,$password, $bypass=false)
     {
-        $q  = $this->db->select('password,id,contact,password_token')->from('users')->where('contact',$contact)->get()->row();
+        $q  = $this->db->select('password,id,mobile_number AS contact,password_token')->from('sab_customers')->where('mobile_number',$contact)->get()->row();
         if($q == ""){
             return array('status' => 400,'message' => 'Invalid contact or Password.');
         } else {
@@ -55,15 +55,15 @@ class MyModel extends CI_Model {
                //$token = crypt(substr( md5(rand()), 0, 7));
                $expired_at = date("Y-m-d H:i:s", strtotime('+12 hours'));
                $this->db->trans_start();
-               $this->db->where('id',$id)->update('users',array('last_login' => $last_login));
-               $this->db->where('users_id',$id)->update('users_authentication',array('status' => 0));
-               $this->db->insert('users_authentication',array('users_id' => $id,'token' => $token,'expired_at' => $expired_at));
+               $this->db->where('id',$id)->update('sab_customers',array('last_login' => $last_login));
+               $this->db->where('customer_id',$id)->update('sab_customer_sessions',array('status_type' => 0));
+               $this->db->insert('sab_customer_sessions',array('customer_id' => $id,'session_token' => $token,'date_logout' => $expired_at));
                if ($this->db->trans_status() === FALSE){
                   $this->db->trans_rollback();
                   return array('status' => 500,'message' => 'Internal server error.');
                } else {
                   $this->db->trans_commit();
-                  $data = $this->db->select('id,username,email,contact,dob,gender')->from('users')->where('id',$id)->order_by('id','desc')->get()->result();
+                  $data = $this->db->select('id,username,email,mobile_number AS contact,dob,gender')->from('sab_customers')->where('id',$id)->order_by('id','desc')->get()->result();
                   if($bypass==true){
                       $msg= "SignUp Successfully";
                   }else{
@@ -78,19 +78,21 @@ class MyModel extends CI_Model {
     }
     public function signup($data)
     { 
-            $c = $this->db->select('contact')->from('users')->where('contact',$data['contact'])->get()->row();
-            if($c && $c->contact==$data['contact']){
+            $c = $this->db->select('mobile_number')->from('sab_customers')->where('mobile_number',$data['contact'])->get()->row();
+            if($c && $c->mobile_number==$data['contact']){
                 return array('status' => 401,'message' => 'Contact already exists');
             }else{
-                    $this->db->insert('users',$data);
-                    $insert_id = $this->db->insert_id();
-                    $data = $this->db->select('id,username,email,contact,dob,gender')->from('users')->where('id',$insert_id)->order_by('id','desc')->get()->result();
-                    return array('status' => 201,'message' => 'SignUp Successfully','data'=>$data);
+                $data['mobile_number'] = $data['contact'];
+                unset($data['contact']);
+                $this->db->insert('sab_customers',$data);
+                $insert_id = $this->db->insert_id();
+                $data = $this->db->select('id,username,email,mobile_number AS contact,dob,gender')->from('sab_customers')->where('id',$insert_id)->order_by('id','desc')->get()->result();
+                return array('status' => 201,'message' => 'SignUp Successfully','data'=>$data);
             } 
     }
     public function verify($data)
     {
-        $c = $this->db->select('contact')->from('users')->where('contact',$data['contact'])->get()->row();
+        $c = $this->db->select('mobile_number AS contact')->from('sab_customers')->where('mobile_number',$data['contact'])->get()->row();
         if($c && $c->contact==$data['contact']){
             return array('status' => 401,'message' => 'contact already exists');
         }else{
@@ -99,9 +101,9 @@ class MyModel extends CI_Model {
     }
 	public function forgotpassword($data)
     {
-        $c = $this->db->select('contact,id')->from('users')->where('contact',$data['contact'])->get()->row();
+        $c = $this->db->select('mobile_number AS contact,id')->from('sab_customers')->where('mobile_number',$data['contact'])->get()->row();
         if($c && $c->contact==$data['contact']){
-			$r = $this->db->where('id',$c->id)->update('users',['password'=>$data['password'],'password_token'=>$data['password_token']]);
+			$r = $this->db->where('id',$c->id)->update('sab_customers',['password'=>$data['password'],'password_token'=>$data['password_token']]);
 			if($r){
 				return array('status' => 200,'message' => 'Password has been updated.');
 			}else{
@@ -113,7 +115,7 @@ class MyModel extends CI_Model {
     }
     public function changepassword($data)
     {
-        $user = $this->db->select('*')->from('users')->where('id',$data['user_id'])->get()->row();
+        $user = $this->db->select('*')->from('sab_customers')->where('id',$data['user_id'])->get()->row();
         if($user && ($user->password == crypt($data['old_password'],$user->password_token))){
 			$randomIdLength=10;
             $token = '';
@@ -129,7 +131,7 @@ class MyModel extends CI_Model {
             $data['password'] = crypt($data['new_password'],$token);
             $this->db->set(['password'=>$data['password'],'password_token'=>$data['password_token']]);
             $this->db->where('id',$data['user_id']);
-            $result = $this->db->update('users'); 
+            $result = $this->db->update('sab_customers'); 
             if($result){
                 return array('status' => 200,'message' => "Password has been updated");
             }else{
@@ -154,7 +156,7 @@ class MyModel extends CI_Model {
         unset($data['user_id']);
         $this->db->set($data);
         $this->db->where('id', $user_id);
-        $result = $this->db->update('users'); 
+        $result = $this->db->update('sab_customers'); 
         if($result){
             return array('status' => 200,'message' => "Data has been updated");
         }else{

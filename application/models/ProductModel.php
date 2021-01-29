@@ -4,7 +4,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class ProductModel extends CI_Model {
     public function getSliderImages()
     { 
-        $getSliderImages = $this->db->select('*')->from('slider_images')->get()->result_array();
+        $getSliderImages = $this->db->select('*')->from('sab_slider_images')->get()->result_array();
         if($getSliderImages){
             return array('status' => 200,'message' => 'Advertisement Slider Images','Total Slider Images'=>count($getSliderImages),'sliderImages'=>$getSliderImages);
         }else{
@@ -13,16 +13,17 @@ class ProductModel extends CI_Model {
     }
     public function getAllProducts($data)
     { 
-        $all_products = $this->db->select('*')->from('products')->get()->result_array();
+        $all_products = $this->db->select('*')->from('sab_inventory_products')->get();
         if($all_products){
+            $all_products = $all_products->result_array();
             return array('status' => 200,'message' => 'Products','Total Products'=>count($all_products),'products'=>$all_products);
         }else{
-            return array('status' => 400,'message' => 'something went wrong');
+            return array('status' => 400,'message' => 'Products Not Availble');
         }
     }
     public function getCart($data)
     {   if(count($data)==1 && $data['user_id']){
-            $cart_id = $this->db->select('*')->from('carts')->where(['user_id'=>$data['user_id'],'status'=>1])->get()->row();
+            $cart_id = $this->db->select('*')->from('carts')->where(['user_id'=>$data['user_id'],'status'=>1])->get();
             if($cart_id){
                 $this->db->select('*');
                 $this->db->from('products');
@@ -44,9 +45,9 @@ class ProductModel extends CI_Model {
     }
     public function deleteCartItem($data)
     {   if(count($data)==2 && $data['user_id'] && $data['product_id']){
-            $cart_id = $this->db->select('*')->from('carts')->where(['user_id'=>$data['user_id'],'status'=>1])->get()->row();
-            if($cart_id){
-                $cart_item_deleted = $this->db->where(['cart_id'=>$cart_id->cart_id,'user_id'=>$data['user_id'],'product_id'=>$data['product_id'],'status'=>1])->update('cart_items',['status'=>0]);
+            $cart_id = $this->db->select('*')->from('sab_carts')->where(['customer_id'=>$data['user_id'],'status'=>1])->get()->result_array();
+            if($cart_id && count($cart_id)){
+                $cart_item_deleted = $this->db->where(['cart_id'=>$cart_id[0]['cart_id'],'customer_id'=>$data['user_id'],'product_id'=>$data['product_id'],'status'=>1])->update('sab_cart_items',['status'=>0]);
                 if($cart_item_deleted){
                     return array('status' => 200,'message' => 'Cart item is Deleted');
                 }else{
@@ -70,20 +71,22 @@ class ProductModel extends CI_Model {
                 return array('status' => 400,'message' => "$column can not be empty");
             }
         }
-        if($data['user_id']){
-            $cart_id = $this->db->select('*')->from('carts')->where(['user_id'=>$data['user_id'],'status'=>1])->get()->row();
-            if($cart_id){
-                $cart_item_result_id = $this->db->select('*')->from('cart_items')->where(['cart_id'=>$cart_id->cart_id,'user_id'=>$data['user_id'],'product_id'=>$data['product_id'],'status'=>1])->get()->row();
+        $p_id = $this->db->select('*')->from('sab_inventory_products')->where(['id'=>$data['product_id']])->get()->result_array();
+        if($data['user_id'] && count($p_id)){
+            $cart_id = $this->db->select('*')->from('sab_carts')->where(['customer_id'=>$data['user_id'],'status'=>1])->get()->result_array();
+            //return array('status' => 200,'message' => $cart_id[0]['cart_id']);
+            if($cart_id && count($cart_id)){
+                $cart_item_result_id = $this->db->select('*')->from('sab_cart_items')->where(['cart_id'=>$cart_id[0]['cart_id'],'customer_id'=>$data['user_id'],'product_id'=>$data['product_id'],'status'=>1])->get()->result_array();
                 if($cart_item_result_id){
                     //return array('status' => 200,'message' => $cart_item_result_id->cart_item_id);
-                    $cart_item_result = $this->db->where('cart_item_id',$cart_item_result_id->cart_item_id)->update('cart_items',['quantity'=>$data['quantity'],'total_price'=>$data['total_price']]);
+                    $cart_item_result = $this->db->where('cart_item_id',$cart_item_result_id[0]['cart_item_id'])->update('sab_cart_items',['quantity'=>$data['quantity'],'total_price'=>$data['total_price']]);
                     if($cart_item_result){
                         return array('status' => 200,'message' => "Item updated successfully");
                     }else{
                         return array('status' => 400,'message' => "Item not updated please try again");
                     }
                 }else{
-                    $cart_item_result  = $this->db->insert('cart_items',['cart_id'=>$cart_id->cart_id,'user_id'=>$cart_id->user_id,'product_id'=>$data['product_id'],'quantity'=>$data['quantity'],'total_price'=>$data['total_price']]);
+                    $cart_item_result  = $this->db->insert('sab_cart_items',['cart_id'=>$cart_id[0]['cart_id'],'customer_id'=>$cart_id[0]['customer_id'],'product_id'=>$data['product_id'],'quantity'=>$data['quantity'],'total_price'=>$data['total_price']]);
                     if($cart_item_result){
                         return array('status' => 200,'message' => "Item in cart added successfully");
                     }else{
@@ -91,19 +94,19 @@ class ProductModel extends CI_Model {
                     }
                 }
             }else{
-                $cart_result  = $this->db->insert('carts',['user_id'=>$data['user_id']]);
+                $cart_result  = $this->db->insert('sab_carts',['customer_id'=>$data['user_id']]);
                 $cart_id = $this->db->insert_id();
                 if($cart_result){
-                    $cart_item_result_id = $this->db->select('*')->from('cart_items')->where(['cart_id'=>$cart_id,'user_id'=>$data['user_id'],'product_id'=>$data['product_id'],'status'=>1])->get()->row();
-                    if($cart_item_result_id){
-                        $cart_item_result = $this->db->where('cart_item_id',$cart_item_result_id->cart_item_id)->update('cart_items',['quantity'=>$data['quantity'],'total_price'=>$data['total_price']]);
+                    $cart_item_result_id = $this->db->select('*')->from('sab_cart_items')->where(['cart_id'=>$cart_id,'customer_id'=>$data['user_id'],'product_id'=>$data['product_id'],'status'=>1])->get()->result_array();
+                    if($cart_item_result_id && count($cart_item_result_id)){
+                        $cart_item_result = $this->db->where('cart_item_id',$cart_item_result_id['cart_item_id'])->update('sab_cart_items',['quantity'=>$data['quantity'],'total_price'=>$data['total_price']]);
                         if($cart_item_result){
                             return array('status' => 200,'message' => "Item updated successfully");
                         }else{
                             return array('status' => 400,'message' => "Item not updated please try again");
                         }
                     }else{
-                        $cart_item_result  = $this->db->insert('cart_items',['cart_id'=>$cart_id,'user_id'=>$data['user_id'],'product_id'=>$data['product_id'],'quantity'=>$data['quantity'],'total_price'=>$data['total_price']]);
+                        $cart_item_result  = $this->db->insert('sab_cart_items',['cart_id'=>$cart_id,'customer_id'=>$data['user_id'],'product_id'=>$data['product_id'],'quantity'=>$data['quantity'],'total_price'=>$data['total_price']]);
                         if($cart_item_result){
                             return array('status' => 200,'message' => "Item in cart added successfully");
                         }else{
@@ -115,7 +118,7 @@ class ProductModel extends CI_Model {
                 }
             }
         }else{
-            return array('status' => 400,'message' => "something went wrong");
+            return array('status' => 400,'message' => "This product is not availble");
         } 
     }
     

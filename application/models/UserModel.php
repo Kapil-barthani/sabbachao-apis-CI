@@ -5,7 +5,7 @@ class UserModel extends CI_Model {
 
     public function offers()
     {
-        $offers = $this->db->select('*')->from('offers')->get()->result_array();
+        $offers = $this->db->select('*')->from('sab_offers')->get()->result_array();
         if($offers){
 			return array('status' => 200,'message' => "Offers",'total ofers '=>count($offers),'data'=>$offers);
         }else{
@@ -17,7 +17,10 @@ class UserModel extends CI_Model {
         if(count($data) ==1){
             return array('status' => 400,'message' => 'Data is required.');
         }else{
-            $result  = $this->db->insert('customer_addresses',$data);
+            $data['customer_city'] = $data['city'];
+            unset($data['city']);
+            //return array('status' => 400,'message' => $data);
+            $result  = $this->db->insert('sab_customer_addresses',$data);
             if($result){
                 return array('status' => 200,'message' => 'Address added Successfully');
             }else{
@@ -28,7 +31,7 @@ class UserModel extends CI_Model {
     public function getCustomerAddresses($data)
     { 
         if(count($data) ==1 && $data['user_id']){
-            $customer_addresses = $this->db->select('*')->from('customer_addresses')->where('user_id',$data['user_id'])->get()->result_array();
+            $customer_addresses = $this->db->select('*')->from('sab_customer_addresses')->where('customer_id',$data['user_id'])->get()->result_array();
             if($customer_addresses){
                 return array('status' => 200,'message' => 'Customer Addresses','Tolat Customer Addresses'=>count($customer_addresses),'data'=>$customer_addresses);
             }else{
@@ -39,7 +42,7 @@ class UserModel extends CI_Model {
         } 
     }
     public function updateCustomerAddressLabel($data)
-    {   
+    {   //return array('status' => 200,'message' => $data);
         $required = ['label','address_id'];
         if (count($data)==1) { return array('status' => 400,'message' =>"label and address_id is required"); } 
         foreach($required as $column){
@@ -49,13 +52,12 @@ class UserModel extends CI_Model {
                 return array('status' => 400,'message' => "$column can not be empty");
             }
         }
-        $user_id = $data['user_id'];
+        $customer_id = $data['customer_id'];
         $address_id = $data['address_id'];
         unset($data['address_id']);
-        unset($data['address_id']);
         $this->db->set($data);
-        $this->db->where(['address_id'=>$address_id,'user_id'=>$user_id]);
-        $result = $this->db->update('customer_addresses'); 
+        $this->db->where(['id'=>$address_id,'customer_id'=>$customer_id]);
+        $result = $this->db->update('sab_customer_addresses'); 
         if($result){
             return array('status' => 200,'message' => "Data has been updated");
         }else{
