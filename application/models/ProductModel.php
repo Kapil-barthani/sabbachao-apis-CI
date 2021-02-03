@@ -23,12 +23,12 @@ class ProductModel extends CI_Model {
     }
     public function getCart($data)
     {   if(count($data)==1 && $data['user_id']){
-            $cart_id = $this->db->select('*')->from('carts')->where(['user_id'=>$data['user_id'],'status'=>1])->get();
+            $cart_id = $this->db->select('*')->from('sab_carts')->where(['customer_id'=>$data['user_id'],'status'=>1])->get()->result_array();
             if($cart_id){
                 $this->db->select('*');
-                $this->db->from('products');
-                $this->db->join('cart_items', 'products.product_id = cart_items.product_id');
-                $this->db->where(['cart_items.cart_id'=>$cart_id->cart_id,'cart_items.user_id'=>$data['user_id'],'cart_items.status'=>1]);
+                $this->db->from('sab_inventory_products');
+                $this->db->join('sab_cart_items', 'sab_inventory_products.id = sab_cart_items.product_id');
+                $this->db->where(['sab_cart_items.cart_id'=>$cart_id[0]['cart_id'],'sab_cart_items.customer_id'=>$data['user_id'],'sab_cart_items.status'=>1]);
                 $cart_items = $this->db->get()->result_array();
                 //$cart_items= $this->db->select('*')->from('cart_items')->where(['cart_id'=>$cart_id->cart_id,'user_id'=>$data['user_id'],'status'=>1])->get()->result_array();
                 if($cart_items){

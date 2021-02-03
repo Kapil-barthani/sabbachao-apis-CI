@@ -172,7 +172,7 @@ class Auth extends CI_Controller {
 		} else {
 			$check_auth_client = $this->MyModel->check_auth_client();
 			if($check_auth_client == true){
-		        	$response = $this->MyModel->logout();
+		        $response = $this->MyModel->logout();
 				json_output($response['status'],$response);
 			}
 		}

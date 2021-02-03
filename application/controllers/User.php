@@ -72,7 +72,7 @@ class User extends CI_Controller {
 				$response = $this->UserModel->getCustomerAddresses($params);
 				json_output($response['status'],$response);
 			}
-		}if($action && $action=='update'){
+		}elseif($action && $action=='update'){
 			if($method != 'PUT'){
 				json_output(400,array('status' => 400,'message' => 'Method for request should be PUT'));
 			} else {
@@ -83,6 +83,23 @@ class User extends CI_Controller {
 				$this->load->model('UserModel');
 				//return json_output(400,array('status' => 400,'message' => $params));
 				$response = $this->UserModel->updateCustomerAddressLabel($params);
+				json_output($response['status'],$response);
+			}
+		}elseif($action && $action=='delete'){
+		    if($method != 'DELETE'){
+				json_output(400,array('status' => 400,'message' => 'Method for request should be DELETE'));
+			} else {
+				$params['customer_id'] = $this->MyModel->verify_token($params);
+				if (!$params['customer_id']) {
+					return;
+				}
+				$params['address_id']= empty($params['address_id'])?'':$params['address_id'];
+				if(empty($params['address_id'])){
+				    return json_output(400,array('status' => 400,'message' => 'address_id is required'));
+				}
+				$this->load->model('UserModel');
+				//return json_output(400,array('status' => 400,'message' => $params));
+				$response = $this->UserModel->deleteCustomerAddress($params);
 				json_output($response['status'],$response);
 			}
 		}elseif($action!="update" && $action!="get"){
