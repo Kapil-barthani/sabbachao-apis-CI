@@ -22,7 +22,7 @@ class ProductModel extends CI_Model {
         }
     }
     public function getCart($data)
-    {   if(count($data)==1 && $data['user_id']){
+    {   if($data['user_id']){
             $cart_id = $this->db->select('*')->from('sab_carts')->where(['customer_id'=>$data['user_id'],'status'=>1])->get()->result_array();
             if($cart_id){
                 $this->db->select('*');

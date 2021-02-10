@@ -19,6 +19,41 @@ class HomeModel extends CI_Model {
         }
         return array('status' => 200,'message' => 'Total Stores: '.count($meta),'data'=>$meta);
     }  
+    public function NearByStoresProductPrice($store_ids,$cart_data){
+        $product_ids = [];
+        foreach($cart_data as $c_d){
+            $product_ids[] = $c_d['product_id'];
+            $cart_id = $c_d['cart_id'];
+        }
+        $meta = [];
+        foreach($store_ids as $store_id){
+            $store_info = $this->db->select('id as store_id,name as storeName,owner_name as ownerName,owner_contact as ownerContact,max_price as DelivaryFee')->from('sab_company_stores')->where(['id'=>$store_id])->order_by('id','desc')->get()->result_array();
+            $this->db->select('sab_inventory_products.id as productId,sab_inventory_products.title as productName,sab_inventory_products.picture as productImage,sab_inventory_products.size as productSize,sab_inventory_products.price as productPrice,sab_store_inventory_products.price as storeProductPrice,sab_cart_items.quantity as cartQuantity');
+            $this->db->from('sab_store_inventory_products');
+            $this->db->join('sab_company_stores', 'sab_company_stores.id = sab_store_inventory_products.store_id');
+            $this->db->join('sab_inventory_products', 'sab_inventory_products.id = sab_store_inventory_products.product_id');
+            $this->db->join('sab_cart_items', 'sab_cart_items.product_id = sab_inventory_products.id');
+            $this->db->where('sab_store_inventory_products.store_id', $store_id);
+            $this->db->where('sab_cart_items.cart_id', $cart_id);
+            $this->db->where_in('sab_store_inventory_products.product_id', $product_ids);
+            $result = $this->db->get()->result_array();
+            
+            $subTotal=0;
+            $discountAmount=0;
+            foreach($result as $v){
+                $subTotal = $subTotal+($v['storeProductPrice']*$v['cartQuantity']);
+                $discountAmount = $discountAmount+($v['productPrice']*$v['cartQuantity']);
+            }
+            if(count($result)){
+               $meta[] = [
+                'subTotal'=>$subTotal,
+                'totalDiscount'=>($discountAmount-$subTotal),
+                'store' =>$store_info,
+                'data' => $result]; 
+            }
+        }
+        return array('status' => 200,'data'=>$meta);
+    }
 }
 // Outside the Class
 /**
