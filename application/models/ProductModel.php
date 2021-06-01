@@ -13,12 +13,16 @@ class ProductModel extends CI_Model {
     }
     public function getAllProducts($data)
     { 
-        $all_products = $this->db->select('*')->from('sab_inventory_products')->get();
+        $search = $data['search_products'];
+        $this->db->select('*');
+        $this->db->from('sab_inventory_products');
+        $this->db->like('LOWER(sab_inventory_products.title)', strtolower($search));
+        $all_products = $this->db->get();
         if($all_products){
             $all_products = $all_products->result_array();
             return array('status' => 200,'message' => 'Products','Total Products'=>count($all_products),'products'=>$all_products);
         }else{
-            return array('status' => 400,'message' => 'Products Not Availble');
+            return array('status' => 400,'message' => 'Products Not Found');
         }
     }
     public function getCart($data)
@@ -62,7 +66,7 @@ class ProductModel extends CI_Model {
     }
     public function addToCart($data)
     {   
-        $required = ['product_id','quantity','total_price'];
+        $required = ['product_id','quantity','total_price','address_id'];
         if (count($data)==1) { return array('status' => 400,'required fields' =>$required); } 
         foreach($required as $column){
             if (!array_key_exists($column, $data)) {
@@ -76,6 +80,9 @@ class ProductModel extends CI_Model {
             $cart_id = $this->db->select('*')->from('sab_carts')->where(['customer_id'=>$data['user_id'],'status'=>1])->get()->result_array();
             //return array('status' => 200,'message' => $cart_id[0]['cart_id']);
             if($cart_id && count($cart_id)){
+                if($cart_id[0]['address_id'] != $data['address_id']){
+                    $this->db->where(['customer_id'=>$data['user_id'],'status'=>1])->update('sab_carts',['address_id'=>$data['address_id']]);
+                }
                 $cart_item_result_id = $this->db->select('*')->from('sab_cart_items')->where(['cart_id'=>$cart_id[0]['cart_id'],'customer_id'=>$data['user_id'],'product_id'=>$data['product_id'],'status'=>1])->get()->result_array();
                 if($cart_item_result_id){
                     //return array('status' => 200,'message' => $cart_item_result_id->cart_item_id);
@@ -94,7 +101,7 @@ class ProductModel extends CI_Model {
                     }
                 }
             }else{
-                $cart_result  = $this->db->insert('sab_carts',['customer_id'=>$data['user_id']]);
+                $cart_result  = $this->db->insert('sab_carts',['customer_id'=>$data['user_id'],'address_id'=>$data['address_id']]);
                 $cart_id = $this->db->insert_id();
                 if($cart_result){
                     $cart_item_result_id = $this->db->select('*')->from('sab_cart_items')->where(['cart_id'=>$cart_id,'customer_id'=>$data['user_id'],'product_id'=>$data['product_id'],'status'=>1])->get()->result_array();
