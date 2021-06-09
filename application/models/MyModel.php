@@ -35,6 +35,8 @@ class MyModel extends CI_Model {
     public function login($contact,$password, $bypass=false)
     {
         $q  = $this->db->select('password,id,mobile_number AS contact,password_token')->from('sab_customers')->where('mobile_number',$contact)->get()->row();
+        // change moizam 
+        
         if($q == ""){
             return array('status' => 400,'message' => 'Invalid contact or Password.');
         } else {
